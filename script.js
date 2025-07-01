@@ -1,4 +1,4 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzYgykVhY5m8WtLxm0zh3WCJ1E3E5HtJzcssBK0fybZgNkiudJS4ZdIztTDivXNqQg1/exec'; // ← استبدله برابط السكربت الحقيقي
+const scriptURL = 'https://script.google.com/macros/s/AKfycbzYgykVhY5m8WtLxm0zh3WCJ1E3E5HtJzcssBK0fybZgNkiudJS4ZdIztTDivXNqQg1/exec';
 
 // ✅ تسجيل حساب جديد
 document.getElementById('btnRegister')?.addEventListener('click', () => {
@@ -110,7 +110,7 @@ if (location.pathname.includes('dashboard.html')) {
       try {
         const data = JSON.parse(res);
         if (data && !data.error) {
-          msg.innerText = "هذا الطالب مسجل مسبقا.";
+          msg.innerText = "❌ هذا الطالب مسجل مسبقا.";
         } else {
           // إذا لم يكن مسجلًا، أضفه
           postToSheet(gather(), 'add').then(r => msg.innerText = r);
@@ -154,4 +154,3 @@ if (location.pathname.includes('dashboard.html')) {
     postToSheet(gather(), 'edit').then(r => msg.innerText = r);
   };
 }
-
