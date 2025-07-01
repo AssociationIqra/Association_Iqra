@@ -1,11 +1,57 @@
 const scriptURL = 'https://script.google.com/macros/s/AKfycbzYgykVhY5m8WtLxm0zh3WCJ1E3E5HtJzcssBK0fybZgNkiudJS4ZdIztTDivXNqQg1/exec'; // ← استبدله برابط السكربت الحقيقي
 
-// تسجيل الدخول والتحقق
-if (location.pathname.endsWith('dashboard.html') && !localStorage.getItem('logged')) {
-  location.href = 'index.html';
+// ✅ تسجيل حساب جديد
+document.getElementById('btnRegister')?.addEventListener('click', () => {
+  const username = document.getElementById('regUsername').value.trim();
+  const password = document.getElementById('regPass').value.trim();
+  const regMsg = document.getElementById('regMsg');
+
+  if (!username || !password) {
+    regMsg.textContent = 'يرجى إدخال اسم المستخدم وكلمة المرور.';
+    regMsg.style.color = 'red';
+    return;
+  }
+
+  let users = JSON.parse(localStorage.getItem('users')) || [];
+  if (users.find(u => u.username === username)) {
+    regMsg.textContent = '⚠️ اسم المستخدم موجود مسبقًا.';
+    regMsg.style.color = 'red';
+    return;
+  }
+
+  users.push({ username, password });
+  localStorage.setItem('users', JSON.stringify(users));
+  regMsg.textContent = '✅ تم إنشاء الحساب! سيتم تحويلك...';
+  regMsg.style.color = 'green';
+  setTimeout(() => window.location.href = 'index.html', 2000);
+});
+
+// ✅ تسجيل الدخول
+document.getElementById('btnLogin')?.addEventListener('click', () => {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value.trim();
+  const loginMsg = document.getElementById('loginMsg');
+
+  let users = JSON.parse(localStorage.getItem('users')) || [];
+  const match = users.find(u => u.username === username && u.password === password);
+
+  if (match) {
+    localStorage.setItem('loggedIn', 'true');
+    window.location.href = 'dashboard.html';
+  } else {
+    loginMsg.textContent = '❌ اسم المستخدم أو كلمة المرور غير صحيحة.';
+    loginMsg.style.color = 'red';
+  }
+});
+
+// ✅ تأمين صفحة dashboard
+if (location.pathname.includes('dashboard.html')) {
+  if (!localStorage.getItem('loggedIn')) {
+    window.location.href = 'index.html';
+  }
 }
 
-// ربط الحقول بالأسماء في Google Sheets
+// ✅ ربط الحقول بالأسماء العربية
 const fieldMap = {
   fname: "الاسم",
   lname: "اللقب",
@@ -26,88 +72,86 @@ const fieldMap = {
 
 const formEls = Object.keys(fieldMap);
 
+// ✅ تجميع البيانات
 function gather() {
-  let o = {};
+  let obj = {};
   formEls.forEach(id => {
-    const arabicKey = fieldMap[id];
-    o[arabicKey] = document.getElementById(id)?.value || "";
+    obj[fieldMap[id]] = document.getElementById(id).value;
   });
-  return o;
+  return obj;
 }
 
-function fill(obj) {
-  for (const [engKey, arabicKey] of Object.entries(fieldMap)) {
-    document.getElementById(engKey).value = obj[arabicKey] || "";
+// ✅ تعبئة النموذج عند جلب البيانات
+function fill(data) {
+  for (const [id, arabic] of Object.entries(fieldMap)) {
+    document.getElementById(id).value = data[arabic] || '';
   }
 }
 
+// ✅ إرسال البيانات إلى Google Sheet
 function postToSheet(payload, action) {
   return fetch(`${scriptURL}?action=${action}`, {
     method: 'POST',
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.text());
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' }
+  }).then(r => r.text());
 }
 
-// 🎯 العمليات داخل dashboard.html
-if (location.pathname.endsWith('dashboard.html')) {
-  const statusMsg = document.getElementById('statusMsg');
+// ✅ أزرار لوحة التحكم
+if (location.pathname.includes('dashboard.html')) {
+  const msg = document.getElementById('statusMsg');
 
   document.getElementById('addStud').onclick = () => {
-    const regNo = document.getElementById("regNo").value.trim();
-    if (!regNo) {
-      statusMsg.innerText = "❗يرجى إدخال رقم التسجيل.";
-      return;
-    }
-    postToSheet(gather(), 'add').then(txt => {
-      statusMsg.innerText = txt;
-    }).catch(err => {
-      statusMsg.innerText = "❌ فشل الاتصال بالخادم";
+    const regNo = document.getElementById('regNo').value;
+    if (!regNo) return msg.innerText = "⚠️ يرجى إدخال رقم التسجيل";
+
+    // تحقق من وجود الطالب أولاً
+    postToSheet({ "رقم التسجيل": regNo }, 'get').then(res => {
+      try {
+        const data = JSON.parse(res);
+        if (data && !data.error) {
+          msg.innerText = "هذا الطالب مسجل مسبقا.";
+        } else {
+          // إذا لم يكن مسجلًا، أضفه
+          postToSheet(gather(), 'add').then(r => msg.innerText = r);
+        }
+      } catch (e) {
+        msg.innerText = "⚠️ حدث خطأ في الاتصال بالخادم.";
+      }
     });
   };
 
   document.getElementById('delStud').onclick = () => {
-    let regNo = prompt("أدخل رقم التسجيل لحذف الطالب");
-    if (regNo) {
-      postToSheet({ "رقم التسجيل": regNo }, 'delete').then(txt => {
-        statusMsg.innerText = txt;
-      }).catch(err => {
-        statusMsg.innerText = "❌ فشل الاتصال بالخادم";
-      });
-    }
-  };
-
-  document.getElementById('getStud').onclick = () => {
-    let regNo = prompt("أدخل رقم التسجيل لجلب البيانات");
-    if (regNo) {
-      postToSheet({ "رقم التسجيل": regNo }, 'get').then(response => {
-        try {
-          const data = JSON.parse(response);
-          if (data.error) {
-            statusMsg.innerText = data.error;
-          } else {
-            fill(data);
-            statusMsg.innerText = "✅ تم جلب البيانات";
-          }
-        } catch (err) {
-          statusMsg.innerText = "⚠️ فشل في تحليل البيانات";
-        }
-      }).catch(() => {
-        statusMsg.innerText = "❌ فشل الاتصال بالخادم";
-      });
-    }
-  };
-
-  document.getElementById('editStud').onclick = () => {
-    postToSheet(gather(), 'edit').then(txt => {
-      statusMsg.innerText = txt;
-    }).catch(err => {
-      statusMsg.innerText = "❌ فشل الاتصال بالخادم";
-    });
+    const regNo = document.getElementById('regNo').value;
+    if (!regNo) return msg.innerText = "⚠️ أدخل رقم التسجيل لحذف الطالب";
+    postToSheet({ "رقم التسجيل": regNo }, 'delete').then(r => msg.innerText = r);
   };
 
   document.getElementById('clearForm').onclick = () => {
     formEls.forEach(id => document.getElementById(id).value = '');
-    statusMsg.innerText = "🧹 تم مسح البيانات";
+    msg.innerText = 'تم تفريغ النموذج';
+  };
+
+  document.getElementById('getStud').onclick = () => {
+    const regNo = document.getElementById('regNo').value;
+    if (!regNo) return msg.innerText = "⚠️ أدخل رقم التسجيل للبحث";
+    postToSheet({ "رقم التسجيل": regNo }, 'get')
+      .then(r => {
+        try {
+          const obj = JSON.parse(r);
+          if (obj.error) msg.innerText = obj.error;
+          else {
+            fill(obj);
+            msg.innerText = '✅ تم جلب البيانات';
+          }
+        } catch (e) {
+          msg.innerText = "⚠️ فشل الاتصال بالخادم.";
+        }
+      });
+  };
+
+  document.getElementById('editStud').onclick = () => {
+    postToSheet(gather(), 'edit').then(r => msg.innerText = r);
   };
 }
+
