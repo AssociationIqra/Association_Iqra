@@ -1,5 +1,4 @@
 const scriptURL = 'https://script.google.com/macros/s/AKfycbzYgykVhY5m8WtLxm0zh3WCJ1E3E5HtJzcssBK0fybZgNkiudJS4ZdIztTDivXNqQg1/exec';
-
 // ✅ تسجيل حساب جديد
 document.getElementById('btnRegister')?.addEventListener('click', () => {
   const username = document.getElementById('regUsername').value.trim();
@@ -45,13 +44,13 @@ document.getElementById('btnLogin')?.addEventListener('click', () => {
 });
 
 // ✅ تأمين صفحة dashboard
-if (location.pathname.includes('dashboard.html')) {
+if (window.location.href.includes('dashboard')) {
   if (!localStorage.getItem('loggedIn')) {
     window.location.href = 'index.html';
   }
 }
 
-// ✅ ربط الحقول بالأسماء العربية
+// ✅ أسماء الحقول بالعربية
 const fieldMap = {
   fname: "الاسم",
   lname: "اللقب",
@@ -81,14 +80,14 @@ function gather() {
   return obj;
 }
 
-// ✅ تعبئة النموذج عند جلب البيانات
+// ✅ تعبئة النموذج
 function fill(data) {
   for (const [id, arabic] of Object.entries(fieldMap)) {
     document.getElementById(id).value = data[arabic] || '';
   }
 }
 
-// ✅ إرسال البيانات إلى Google Sheet
+// ✅ إرسال البيانات
 function postToSheet(payload, action) {
   return fetch(`${scriptURL}?action=${action}`, {
     method: 'POST',
@@ -97,60 +96,57 @@ function postToSheet(payload, action) {
   }).then(r => r.text());
 }
 
-// ✅ أزرار لوحة التحكم
-if (location.pathname.includes('dashboard.html')) {
+// ✅ معالجات الأزرار (بدون شرط pathname)
+window.addEventListener('DOMContentLoaded', () => {
   const msg = document.getElementById('statusMsg');
 
-  document.getElementById('addStud').onclick = () => {
+  document.getElementById('addStud')?.addEventListener('click', () => {
     const regNo = document.getElementById('regNo').value;
     if (!regNo) return msg.innerText = "⚠️ يرجى إدخال رقم التسجيل";
 
-    // تحقق من وجود الطالب أولاً
     postToSheet({ "رقم التسجيل": regNo }, 'get').then(res => {
       try {
         const data = JSON.parse(res);
         if (data && !data.error) {
           msg.innerText = "❌ هذا الطالب مسجل مسبقا.";
         } else {
-          // إذا لم يكن مسجلًا، أضفه
           postToSheet(gather(), 'add').then(r => msg.innerText = r);
         }
       } catch (e) {
         msg.innerText = "⚠️ حدث خطأ في الاتصال بالخادم.";
       }
     });
-  };
+  });
 
-  document.getElementById('delStud').onclick = () => {
+  document.getElementById('delStud')?.addEventListener('click', () => {
     const regNo = document.getElementById('regNo').value;
     if (!regNo) return msg.innerText = "⚠️ أدخل رقم التسجيل لحذف الطالب";
     postToSheet({ "رقم التسجيل": regNo }, 'delete').then(r => msg.innerText = r);
-  };
+  });
 
-  document.getElementById('clearForm').onclick = () => {
+  document.getElementById('clearForm')?.addEventListener('click', () => {
     formEls.forEach(id => document.getElementById(id).value = '');
     msg.innerText = 'تم تفريغ النموذج';
-  };
+  });
 
-  document.getElementById('getStud').onclick = () => {
+  document.getElementById('getStud')?.addEventListener('click', () => {
     const regNo = document.getElementById('regNo').value;
     if (!regNo) return msg.innerText = "⚠️ أدخل رقم التسجيل للبحث";
-    postToSheet({ "رقم التسجيل": regNo }, 'get')
-      .then(r => {
-        try {
-          const obj = JSON.parse(r);
-          if (obj.error) msg.innerText = obj.error;
-          else {
-            fill(obj);
-            msg.innerText = '✅ تم جلب البيانات';
-          }
-        } catch (e) {
-          msg.innerText = "⚠️ فشل الاتصال بالخادم.";
+    postToSheet({ "رقم التسجيل": regNo }, 'get').then(r => {
+      try {
+        const obj = JSON.parse(r);
+        if (obj.error) msg.innerText = obj.error;
+        else {
+          fill(obj);
+          msg.innerText = '✅ تم جلب البيانات';
         }
-      });
-  };
+      } catch (e) {
+        msg.innerText = "⚠️ فشل الاتصال بالخادم.";
+      }
+    });
+  });
 
-  document.getElementById('editStud').onclick = () => {
+  document.getElementById('editStud')?.addEventListener('click', () => {
     postToSheet(gather(), 'edit').then(r => msg.innerText = r);
-  };
-}
+  });
+});
