@@ -1,4 +1,4 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbzYgykVhY5m8WtLxm0zh3WCJ1E3E5HtJzcssBK0fybZgNkiudJS4ZdIztTDivXNqQg1/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbyjj0iBHgOexlGJ9dO3TfkF7kkPfOT1rLgG89dKNKJhlE-vnzdzQCCt8IyTrWfAbDOF/exec';
 // ✅ تسجيل حساب جديد
 document.getElementById('btnRegister')?.addEventListener('click', () => {
   const username = document.getElementById('regUsername').value.trim();
