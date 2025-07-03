@@ -92,7 +92,7 @@ function postToSheet(payload, action) {
   return fetch(`${scriptURL}?action=${action}`, {
     method: 'POST',
     body: JSON.stringify(payload),
-    mode: 'no-cors', // ⚠️ حل مؤقت لتجاوز CORS
+    // ⚠️ حل مؤقت لتجاوز CORS
     headers: { 'Content-Type': 'application/json' }
   }).then(r => r.text());
 }
